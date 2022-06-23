@@ -1,3 +1,4 @@
+
 // Recipes API
 //
 // This is a sample recipes API. You can find out more about the API at https://github.com/gin-gonic/gin
@@ -14,6 +15,8 @@
 //	Produces:
 //	- application/json
 // swagger:meta
+
+
 package main
 
 import (
@@ -27,11 +30,15 @@ import (
 	"github.com/rs/xid"
 )
 
+
 var recipes []Recipe
 
 // swagger:parameters recipes newRecipe
 type Recipe struct {
 	//swagger:ignore
+
+type Recipe struct {
+
 	ID           string    `json:"id"`
 	Name         string    `json:"name"`
 	Tags         []string  `json:"tags"`
@@ -39,6 +46,7 @@ type Recipe struct {
 	Instructions []string  `json:"instructions"`
 	PublishedAt  time.Time `json:"publishedAt"`
 }
+
 
 // swagger:operation GET /recipes recipes listRecipes
 // Returns list of recipes
@@ -95,11 +103,45 @@ func NewRecipeHandler(c *gin.Context) {
 //         description: Invalid input
 //     '404':
 //         description: Invalid recipe ID
+
+var recipes []Recipe
+
+func init() {
+	recipes = make([]Recipe, 0)
+	file, _ := ioutil.ReadFile("recipes.json")
+	_ = json.Unmarshal([]byte(file), &recipes)
+}
+
+func NewRecipeHandler(c *gin.Context) {
+	var recipe Recipe
+	if err := c.ShouldBindJSON(&recipe); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": err.Error()})
+		return
+	}
+	recipe.ID = xid.New().String()
+	recipe.PublishedAt = time.Now()
+	recipes = append(recipes, recipe)
+	c.JSON(http.StatusOK, recipe)
+}
+
+func ListRecipesHandler(c *gin.Context) {
+	c.JSON(http.StatusOK, recipes)
+}
+
+
 func UpdateRecipeHandler(c *gin.Context) {
 	id := c.Param("id")
 	var recipe Recipe
 	if err := c.ShouldBindJSON(&recipe); err != nil {
+
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": err.Error()})
 		return
 	}
 
@@ -107,11 +149,15 @@ func UpdateRecipeHandler(c *gin.Context) {
 	for i := 0; i < len(recipes); i++ {
 		if recipes[i].ID == id {
 			index = i
+
 			break
+
+
 		}
 	}
 
 	if index == -1 {
+
 		c.JSON(http.StatusNotFound, gin.H{"error": "Recipe not found"})
 		return
 	}
@@ -140,15 +186,31 @@ func UpdateRecipeHandler(c *gin.Context) {
 func DeleteRecipeHandler(c *gin.Context) {
 	id := c.Param("id")
 
+
+		c.JSON(http.StatusNotFound, gin.H{
+			"error": "Recipe not found"})
+		return
+	}
+	recipes[index] = recipe
+	c.JSON(http.StatusOK, recipe)
+}
+
+func DeleteRecipeHandler(c *gin.Context) {
+	id := c.Param("id")
+
 	index := -1
 	for i := 0; i < len(recipes); i++ {
 		if recipes[i].ID == id {
 			index = i
+
 			break
+
+
 		}
 	}
 
 	if index == -1 {
+
 		c.JSON(http.StatusNotFound, gin.H{"error": "Recipe not found"})
 		return
 	}
@@ -172,6 +234,17 @@ func DeleteRecipeHandler(c *gin.Context) {
 // responses:
 //     '200':
 //         description: Successful operation
+
+		c.JSON(http.StatusNotFound, gin.H{
+			"error": "Recipe not found"})
+		return
+	}
+	recipes = append(recipes[:index], recipes[index+1:]...)
+	c.JSON(http.StatusOK, gin.H{
+		"message": "Recipe has been deleted"})
+}
+
+
 func SearchRecipesHandler(c *gin.Context) {
 	tag := c.Query("tag")
 	listOfRecipes := make([]Recipe, 0)
@@ -187,6 +260,7 @@ func SearchRecipesHandler(c *gin.Context) {
 			listOfRecipes = append(listOfRecipes, recipes[i])
 		}
 	}
+
 
 	c.JSON(http.StatusOK, listOfRecipes)
 }
@@ -225,12 +299,21 @@ func init() {
 	_ = json.Unmarshal([]byte(file), &recipes)
 }
 
+
+	c.JSON(http.StatusOK, listOfRecipes)
+}
+
+
 func main() {
 	router := gin.Default()
 	router.POST("/recipes", NewRecipeHandler)
 	router.GET("/recipes", ListRecipesHandler)
 	router.PUT("/recipes/:id", UpdateRecipeHandler)
 	router.DELETE("/recipes/:id", DeleteRecipeHandler)
+
 	router.GET("/recipes/:id", GetRecipeHandler)
-	router.Run()
+
+	router.GET("/recipes/search", SearchRecipesHandler)
+	router.Run(":5000")
+
 }
